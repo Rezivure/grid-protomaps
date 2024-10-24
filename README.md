@@ -1,6 +1,6 @@
-# Creating Protomaps Map Tile Server for Grid Self-Hosting
+# Creating Protomaps Map Tile Provider for Grid Self-Hosting
 
-The Grid mobile app enables users to set their own server and map tile provider through the "Custom Provider" interface. In its current state, Grid is configured for utilization of PMTiles from Protomaps. Protomaps is a free and open source map of the world. To learn more about Protomaps, check out their website: [Protomaps](http://protomaps.com/).
+The Grid mobile app enables users to set their own backend server and map tile provider through the "Custom Provider" interface. In its current state, Grid is configured for utilization of PMTiles from Protomaps. Protomaps is a free and open source map of the world. To learn more about Protomaps, check out their website: [Protomaps](http://protomaps.com/).
 
 #### What are PMTiles?
 
@@ -10,7 +10,7 @@ The Grid mobile app enables users to set their own server and map tile provider 
 
 
 ### Step 1: Download Protomaps Build (.pmtiles)
-The first step to creating a map tile server is to generate a .pmtiles file. To do so, you first need to download the latest build (approximately 106GB) [here](https://maps.protomaps.com/builds/).
+The first step to creating a Protomaps map tile provider is to generate a .pmtiles file. To do so, you first need to download the latest build (approximately 106GB) [here](https://maps.protomaps.com/builds/).
 
 ### Step 2: Extract Desired Region (optional)
 If you only require or desire maps for a specific region (state, country, etc), you can extract a specific region utilizing the pmtiles CLI, documentation and instructions for that is located [here](https://docs.protomaps.com/guide/getting-started).
