@@ -1,0 +1,16 @@
+name = "cloudflare-worker-name"
+main = "src/index.ts"
+compatibility_date = "2022-10-18"
+account_id = "your-account-id"
+minify = true
+
+r2_buckets  = [
+  { binding = "BUCKET", bucket_name = "your-protomaps-bucket-name" }
+]
+
+[vars]
+PMTILES_PATH = "protomaps.pmtiles"
+PUBLIC_HOSTNAME = "your-cool-domain.com"  # Replace with your actual hostname if needed
+ALLOWED_ORIGINS = "https://www.your-domain,https://your-domain,https://localhost:3000,*"
+CACHE_MAX_AGE = "86400"  # Cache for 1 day in seconds
+CACHE_CONTROL = "public, max-age=86400"  # Public caching for 1 day
