@@ -1,82 +1,64 @@
-[![npm](https://img.shields.io/npm/v/pmtiles)](https://www.npmjs.com/package/pmtiles)
-[![pypi](https://img.shields.io/pypi/v/pmtiles)](https://pypi.org/project/pmtiles/)
+# Creating Protomaps Map Tile Server for Grid Self-Hosting
 
-🔎 **PMTiles Viewer:** [https://pmtiles.io/](https://pmtiles.io) 🔎
+The Grid mobile app enables users to set their own server and map tile provider through the "Custom Provider" interface. In its current state, Grid is configured for utilization of PMTiles from Protomaps. Protomaps is a free and open source map of the world. To learn more about Protomaps, check out their website: [Protomaps](http://protomaps.com/).
 
-# PMTiles
+#### What are PMTiles?
 
-PMTiles is a single-file archive format for tiled data. A PMTiles archive can be hosted on a commodity storage platform such as S3, and enables low-cost, zero-maintenance map applications that are "serverless" - free of a custom tile backend or third party provider.
-
-* [Protomaps Blog: Dynamic Maps, Static Storage](http://protomaps.com/blog/dynamic-maps-static-storage)
-
-* [PMTiles Viewer](https://pmtiles.io) - inspect and preview PMTiles local or remote PMTiles archives.
-    * Archives on cloud storage may require CORS for the origin `https://protomaps.github.io`
-
-* [Vector Tiles Example (US Zip Codes)](https://pmtiles.io/?url=https%3A%2F%2Fr2-public.protomaps.com%2Fprotomaps-sample-datasets%2Fcb_2018_us_zcta510_500k.pmtiles)
+> "PMTiles is a single-file archive format for tiled data. A PMTiles archive can be hosted on a commodity storage platform such as S3, and enables low-cost, zero-maintenance map applications that are "serverless" - free of a custom tile backend or third party provider." - Protomaps Documentation
 
 
-Demos require MapLibre GL JS v1.15 or later.
 
-See also:
-* [Cloud Optimized GeoTIFFs](https://www.cogeo.org)
 
-## Creating PMTiles
+### Step 1: Download Protomaps Build (.pmtiles)
+The first step to creating a map tile server is to generate a .pmtiles file. To do so, you first need to download the latest build (approximately 106GB) [here](https://maps.protomaps.com/builds/).
 
-Download the `pmtiles` binary for your system at [go-pmtiles/Releases](https://github.com/protomaps/go-pmtiles/releases).
+### Step 2: Extract Desired Region (optional)
+If you only require or desire maps for a specific region (state, country, etc), you can extract a specific region utilizing the pmtiles CLI, documentation and instructions for that is located [here](https://docs.protomaps.com/guide/getting-started).
 
-    pmtiles convert INPUT.mbtiles OUTPUT.pmtiles
-    pmtiles upload OUTPUT.pmtiles s3://my-bucket?region=us-west-2 // requires AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY env vars to be set
+### Step 3: Upload to Cloudflare R2 / Host .pmtiles
+Currently, we have Grid configured to utilize a Cloudflare R2 bucket to host the large .pmtiles. This is for a few reasons:
+* Privacy - Cloudflare is a company that values privacy ([privacy policy](https://www.cloudflare.com/trust-hub/privacy-and-data-protection/)).
+* R2 buckets are very cheap for not only hosting but for serving data, making it cost practically pennies.
+* A large majority of "self-hosters" utilize Cloudflare for DNS, and it is a fairly low barrier to entry to create a R2 bucket and Cloudflare worker versus hosting on-prem a map tile server like OpenStreetMaps.
+* Much simpler than serving tiles, sprites, fonts, etc.
+* It's aesthetic.
 
-## Consuming PMTiles
+In the future, OpenStreetMaps can be implemented as an additional feature.
 
-### JavaScript
+To add your .pmtiles file to R2, follow documentation [here](https://docs.protomaps.com/pmtiles/cloud-storage).
 
-See [js/README.md](js/README.md) and [js/examples](js/examples) for usage in Leaflet or MapLibre GL JS.
+You will mainly have to setup the tool rclone on your local machine with an API key, and run:
+```bash
+rclone copyto my-filename my-configuration:my-bucket/my-folder/my-filename.pmtiles --progress --s3-chunk-size=256M
+```
+Once uploaded, your R2 bucket should contain a "protomaps.pmtiles" file approximately 100-130GB in size.
 
-See [openlayers/README.md](openlayers/README.md) for usage in OpenLayers.
+There are alternatives to self-host such as [MinIO](https://github.com/minio/minio) however it has not been tested yet.
 
-### Go
+####
 
-See the [go-pmtiles](https://github.com/protomaps/go-pmtiles) repository.
+### Step 3: Create Cloudflare Worker / Serve Tiles
 
-### Python
+If using Cloudflare R2, navigate to Cloudflare and create a worker. In serverless/cloudflare configure your wrangler.toml for your R2 Bucket. Utilize wrangler to build/push remotely to Cloudflare. For more documentation from Protomaps, go [here](https://docs.protomaps.com/deploy/cloudflare).
 
-See https://github.com/protomaps/PMTiles/tree/main/python/bin for library usage
+To create a self-hosted worker, use Node to create a simple HTTP server using the same code in /serverless/src/index.ts.
 
-### Serverless
 
-[PMTiles on AWS Lambda](https://github.com/protomaps/PMTiles/tree/main/serverless/aws)
+### Step 4: Route DNS
 
-[PMTiles on Cloudflare Workers](https://github.com/protomaps/PMTiles/tree/main/serverless/cloudflare)
+Point a domain (maps.yourcool.domain) to your Cloudflare Worker or use your static IP if you have one.
 
-## Specification
+### Step 5: Configure Custom Provider in App
 
-The current specification version is [Version 3](./spec/v3/spec.md).
-
-## Recipes
-
-Example of how to create a PMTiles archive from the [Census Bureau Zip Code Tabulation Areas Shapefile](https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html) using [tippecanoe](https://github.com/felt/tippecanoe):
-
-```sh
-    # use GDAL/OGR to convert SHP to GeoJSON
-    ogr2ogr -t_srs EPSG:4326 cb_2018_us_zcta510_500k.json cb_2018_us_zcta510_500k.shp
-    # Creates a layer in the vector tiles named "zcta"
-    tippecanoe -zg --projection=EPSG:4326 -o cb_2018_us_zcta510_500k_nolimit.pmtiles -l zcta cb_2018_us_zcta510_500k.json
+On the landing page of Grid, press Custom Provider and next to Maps URL enter:
+```bash
+https://your.cool.domain/v1/protomaps.pmtiles
 ```
 
-### Uploading to Storage
+Congratulations, you should now have a working map tile server.
 
-Using the [PMTiles command line tool](http://github.com/protomaps/go-pmtiles):
 
-```sh
-pmtiles upload LOCAL.pmtiles "s3://BUCKET_NAME?endpoint=https://example.com&region=region" REMOTE.pmtiles
-```
 
-Using [RClone](https://rclone.org) (do `rclone config` first)
-
-```sh
-rclone copyto LOCAL.pmtiles r2:/BUCKET/REMOTE.pmtiles --progress --s3-chunk-size=256M --s3-upload-concurrency=2
-```
 
 ## License
 
